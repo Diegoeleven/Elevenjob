@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0b0b0b] text-white;
+  }
+  
+  /* Scroll horizontal suave */
+  .horizontal-scroll {
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+  }
+  
+  .horizontal-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .horizontal-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Snap para seções */
+  .snap-start {
+    scroll-snap-align: start;
+  }
+  
+  .snap-x {
+    scroll-snap-type: x mandatory;
+  }
+  
+  .snap-mandatory {
+    scroll-snap-type: x mandatory;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-6 py-3 rounded-lg transition-all duration-200 font-medium;
+  }
+  
+  .btn-primary {
+    @apply btn bg-[#00d8ff] text-[#0b0b0b] hover:opacity-90;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-[#212121] text-white hover:bg-[#2a2a2a];
+  }
+  
+  .input {
+    @apply w-full px-4 py-3 bg-[#2a2a2a] text-white rounded-lg border border-[#333] focus:border-[#00d8ff] focus:outline-none;
+  }
+  
+  /* Estilos para os pins do mapa */
+  .custom-marker {
+    background: transparent !important;
+    border: none !important;
+  }
+  
+  .custom-marker div {
+    pointer-events: auto;
+  }
+  
+  /* Animações para os pins */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  @keyframes ping {
+    75%, 100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+  
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .animate-ping {
+    animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+}
