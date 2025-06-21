@@ -23,7 +23,7 @@ interface UserContextProps {
 }
 
 const defaultNeighborhood: Neighborhood = {
-  name: 'Centro'
+  name: 'Centro',
 };
 
 const UserContext = createContext<UserContextProps>({
@@ -32,7 +32,7 @@ const UserContext = createContext<UserContextProps>({
   neighborhood: defaultNeighborhood,
   setNeighborhood: () => {},
   hasNewInformation: false,
-  setHasNewInformation: () => {}
+  setHasNewInformation: () => {},
 });
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
@@ -48,7 +48,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         neighborhood,
         setNeighborhood,
         hasNewInformation,
-        setHasNewInformation
+        setHasNewInformation,
       }}
     >
       {children}
@@ -58,4 +58,4 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
 export const useUserContext = () => useContext(UserContext);
 
-export { UserContext }
+export { UserContext };

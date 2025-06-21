@@ -20,7 +20,8 @@ function App() {
           <Route path="/main" element={<MainScreen />} />
           <Route path="/neighborhood" element={<NeighborhoodScreen />} />
           <Route path="/search-results" element={<SearchResultsScreen />} />
-          <Route path="/commerce/:id" element={<CommerceDetailsScreen />} />
+          <Route path="/commerce/:commerceId" element={<CommerceDetailsScreen />} />
+
           <Route path="/admin/commerce-dashboard" element={<CommerceDashboard />} />
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
