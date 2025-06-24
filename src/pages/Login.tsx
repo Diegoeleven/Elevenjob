@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
+import { useUserContext } from '../context/UserContext';
 
 function Login() {
   const navigate = useNavigate();
+  const { setUser } = useUserContext();
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,41 +17,52 @@ function Login() {
       try {
         const userData = JSON.parse(storedUser);
         if (userData && userData.id) {
+          setUser(userData);
           navigate('/main');
         }
       } catch (error) {
+        console.error('Erro ao ler user local:', error);
         localStorage.removeItem('user');
       }
     }
-  }, [navigate]);
+  }, [navigate, setUser]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!email || !telefone) {
       toast.error('Por favor, preencha todos os campos');
       return;
     }
 
     setLoading(true);
+
     try {
       const { data, error } = await supabase
         .from('usuarios')
-        .select('*')
+        .select('id, nome, email, telefone, bairro, cidade, created_at')
         .eq('email', email)
         .eq('telefone', telefone)
-        .limit(1);
+        .limit(1)
+        .single();
 
-      if (error) throw error;
-
-      if (data && data[0]) {
-        localStorage.setItem('user', JSON.stringify(data[0]));
-        toast.success('Login realizado com sucesso');
-        navigate('/main');
-      } else {
-        toast.error('E-mail ou telefone inválido');
+      if (error) {
+        console.error('Erro ao buscar usuário:', error);
+        toast.error('Erro ao buscar usuário. Tente novamente.');
+        return;
       }
+
+      if (!data || !data.id) {
+        toast.error('E-mail ou telefone inválido');
+        return;
+      }
+
+      localStorage.setItem('user', JSON.stringify(data));
+      setUser(data);
+      toast.success('Login realizado com sucesso');
+      navigate('/main');
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('Erro geral no login:', error);
       toast.error('Erro ao realizar login. Tente novamente.');
     } finally {
       setLoading(false);
@@ -70,27 +83,29 @@ function Login() {
         </h1>
 
         <div className="bg-[#1a1a1a] rounded-[24px] px-8 py-10 shadow-2xl border border-[#2a2a2a]">
-          {/* Logo visual Eleven Job */}
-          <div className="relative mb-10 h-[120px] flex items-center justify-center" translate="no">
-            <div 
+          <div
+            className="relative mb-10 h-[120px] flex items-center justify-center"
+            translate="no"
+          >
+            <div
               className="absolute inset-0 flex items-center justify-center text-[120px] text-[#666666] font-serif font-thin select-none pointer-events-none"
               style={{ opacity: 0.5 }}
             >
               11
             </div>
             <div className="relative z-10 flex flex-col items-center">
-              <h2 
+              <h2
                 className="font-serif text-[#ffffff] text-[36px] font-bold tracking-[0.1em]"
                 style={{ marginTop: '55px' }}
               >
                 ELEVEN
               </h2>
-              <span 
+              <span
                 className="text-[#ffffff] text-[16px] italic font-normal self-end"
-                style={{ 
-                  fontFamily: "'Great Vibes', cursive", 
+                style={{
+                  fontFamily: "'Great Vibes', cursive",
                   marginTop: '-8px',
-                  marginRight: '8px'
+                  marginRight: '8px',
                 }}
               >
                 Job

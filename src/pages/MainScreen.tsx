@@ -10,9 +10,9 @@ export default function MainScreen() {
   const { user, setUser } = useUserContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentScreen, setCurrentScreen] = useState(0); // 0: Seu Bairro, 1: Job, 2: Turismo
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar se usuário está logado
     const storedUser = localStorage.getItem('user');
     if (!storedUser) {
       navigate('/login');
@@ -21,8 +21,18 @@ export default function MainScreen() {
 
     try {
       const userData = JSON.parse(storedUser);
+
+      // Prevenir erro de id nulo, obrigando sempre ter id do Supabase
+      if (!userData.id) {
+        console.error('Usuário carregado do localStorage sem ID válido.');
+        navigate('/login');
+        return;
+      }
+
       setUser(userData);
+      setLoading(false);
     } catch (error) {
+      console.error('Erro ao carregar usuário:', error);
       navigate('/login');
     }
   }, [navigate, setUser]);
@@ -40,7 +50,7 @@ export default function MainScreen() {
     }
   };
 
-  if (!user) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-[#0b0b0b] flex items-center justify-center">
         <div className="text-white">Carregando...</div>
@@ -77,7 +87,7 @@ export default function MainScreen() {
           O que você precisa hoje?
         </h2>
 
-        {/* Três Botões Principais - Mais Quadrados e Modernos */}
+        {/* Botões principais */}
         <div className="flex gap-4 w-full max-w-3xl">
           <button
             onClick={() => handleScreenNavigation(0)}
@@ -86,7 +96,7 @@ export default function MainScreen() {
             <div className="text-xl mb-2">🏘️</div>
             Seu Bairro
           </button>
-          
+
           <button
             onClick={() => handleScreenNavigation(1)}
             className="flex-1 py-8 px-6 bg-[#212121] text-gray-400 rounded-2xl font-bold text-lg cursor-not-allowed border border-[#2a2a2a]"
@@ -96,7 +106,7 @@ export default function MainScreen() {
             Job
             <div className="text-xs mt-2 font-normal opacity-70">(em breve)</div>
           </button>
-          
+
           <button
             onClick={() => handleScreenNavigation(2)}
             className="flex-1 py-8 px-6 bg-[#212121] text-gray-400 rounded-2xl font-bold text-lg cursor-not-allowed border border-[#2a2a2a]"
@@ -121,7 +131,7 @@ export default function MainScreen() {
         </div>
       </div>
 
-      {/* Menu Lateral */}
+      {/* Menu lateral */}
       <MenuDrawer
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
