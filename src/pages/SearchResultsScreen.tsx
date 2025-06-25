@@ -341,6 +341,8 @@ export default function SearchResultsScreen() {
     }
   };
 
+  console.log(grouped.produto);
+
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-white flex flex-col items-center">
       {/* Topo: Voltar + Título */}
@@ -556,18 +558,40 @@ export default function SearchResultsScreen() {
                     <div className="bg-[#18181b] rounded-xl mt-2 p-4">
                       {grouped.produto.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {grouped.produto.map(item => (
-                            <div key={item.id} className="bg-[#0b0b0b] rounded-lg p-3 flex gap-3 items-center cursor-pointer hover:bg-[#1a1a1a] transition-colors" onClick={() => navigate(`/commerce/${item.id}`)}>
-                              {item.image && <img src={item.image} alt={item.title} className="w-12 h-12 object-cover rounded-md" />}
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-sm mb-1 truncate">{item.title}</h3>
-                                <p className="text-xs text-gray-300 truncate">{item.description}</p>
-                                {formatDistance(item.distance) && (
-                                  <p className="text-xs text-[#00d8ff] mt-1">{formatDistance(item.distance)}</p>
-                                )}
+                          {grouped.produto.map((product) => {
+                            const nome = product?.title || "Sem nome";
+                            const descricao = product?.description || "Sem descrição";
+                            let imagemUrl = product?.image;
+                            if (imagemUrl) {
+                              try {
+                                imagemUrl = decodeURIComponent(imagemUrl);
+                              } catch {}
+                            }
+                            const imagemFinal =
+                              imagemUrl && imagemUrl.trim() !== "" && imagemUrl !== "null"
+                                ? imagemUrl
+                                : "/img/padrao.png";
+
+                            return (
+                              <div key={product.id} className="bg-[#0b0b0b] rounded-lg p-3 flex gap-3 items-center cursor-pointer hover:bg-[#1a1a1a] transition-colors" onClick={() => navigate(`/commerce/${product.id}`)}>
+                                <img
+                                  src={imagemFinal}
+                                  alt={nome}
+                                  className="w-12 h-12 object-cover rounded-md"
+                                  onError={(e) => {
+                                    e.currentTarget.src = "/img/padrao.png";
+                                  }}
+                                />
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-sm mb-1 truncate">{nome}</h3>
+                                  <p className="text-xs text-gray-300 truncate">{descricao}</p>
+                                  {formatDistance(product.distance) && (
+                                    <p className="text-xs text-[#00d8ff] mt-1">{formatDistance(product.distance)}</p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="text-center py-4 text-gray-400">Nenhum produto encontrado para "{termo}" no bairro atual.</div>
