@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Heart, MessageCircle, Play, Pause } from 'lucide-react';
+import PromotionMap from './PromotionMap';
 
 interface Promotion {
   id: string;
@@ -64,6 +65,7 @@ export default function PromotionBanner({ promotions: propPromotions, onPromotio
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [promotions, setPromotions] = useState<Promotion[]>(propPromotions && propPromotions.length > 0 ? propPromotions : mockPromotions);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     if (propPromotions && propPromotions.length > 0) {
@@ -216,20 +218,15 @@ export default function PromotionBanner({ promotions: propPromotions, onPromotio
       </div>
 
       {/* Opções Adicionais */}
-      <div className="flex gap-3">
+      <div className="flex justify-center mt-6">
         <button
-          onClick={onViewNeighborhood}
-          className="flex-1 py-3 px-4 bg-[#212121] text-white rounded-xl hover:bg-[#2a2a2a] transition-colors text-center"
+          onClick={() => setShowMap(true)}
+          className="border border-blue-500 text-white bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg transition-colors duration-200"
         >
-          Ver promoções do bairro vizinho
-        </button>
-        <button
-          onClick={onAdvancedSearch}
-          className="flex-1 py-3 px-4 bg-[#212121] border border-[#00d8ff] text-[#00d8ff] rounded-xl hover:bg-[#00d8ff]/10 transition-colors text-center"
-        >
-          Busca avançada
+          Ver no mapa
         </button>
       </div>
+      {showMap && <PromotionMap onClose={() => setShowMap(false)} />}
     </div>
   );
 }

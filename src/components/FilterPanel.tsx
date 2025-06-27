@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Search, Clock, Mic, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { registrarBusca } from '../services/searchService';
 
 interface FilterPanelProps {
   isOpen: boolean;
@@ -69,21 +70,14 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ isOpen, bairro, userId, onClo
   }, [activeTab]);
 
   const saveSearch = async (termo: string, tipo: SearchType) => {
-    const payload = [{
-      user_id: userId,
-      bairro_usuario: String(bairro),
-      search_text: termo.trim(),
-      tipo_busca: tipo,
-      tipo_filtro: activeTab,
-    }];
-    console.log('Payload FINAL:', JSON.stringify(payload, null, 2));
-    const { error } = await supabase.from('pesquisas_usuarios').insert(payload);
-    if (error) {
-      console.error('Erro ao inserir no Supabase:', error.message, error.details, error.hint);
+    try {
+      await registrarBusca(termo, tipo, activeTab, userId, bairro);
+      fetchHistory();
+      return true;
+    } catch (error) {
+      console.error('Erro ao salvar busca:', error);
       return false;
     }
-    fetchHistory();
-    return true;
   };
 
   const handleSearch = async () => {

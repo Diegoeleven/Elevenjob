@@ -18,6 +18,7 @@ import AmbulanteList from '../components/AmbulanteList';
 import AmbulanteModal from '../components/AmbulanteModal';
 import FilterPanel from '../components/FilterPanel';
 import { getNeighborhoodFromLatLng, calcularDistanciaEmKm } from '../utils/geolocation';
+import PromotionMap from '../components/PromotionMap';
 
 interface Organ {
   id: string;
@@ -70,6 +71,15 @@ interface Ambulante {
   ativo: boolean;
 }
 
+interface Promocao {
+  id: string;
+  titulo: string;
+  descricao: string;
+  imagem_url?: string;
+  data_inicio: string;
+  data_fim: string;
+}
+
 export default function NeighborhoodScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -98,6 +108,9 @@ export default function NeighborhoodScreen() {
   const [raioSelecionado, setRaioSelecionado] = useState(0);
   const [userLatitude, setUserLatitude] = useState<number | null>(null);
   const [userLongitude, setUserLongitude] = useState<number | null>(null);
+  const [promocoes, setPromocoes] = useState<Promocao[]>([]);
+  const [loadingPromocoes, setLoadingPromocoes] = useState(true);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -107,6 +120,7 @@ export default function NeighborhoodScreen() {
     loadPublications();
     loadOrgans();
     loadAmbulantes();
+    loadPromocoes();
   }, [user, navigate]);
 
   useEffect(() => {
@@ -437,6 +451,31 @@ export default function NeighborhoodScreen() {
     // se houver um termo de busca ativo
   };
 
+  const loadPromocoes = async () => {
+    async function fetchPromocoes() {
+      setLoadingPromocoes(true);
+      if (!user?.bairro) {
+        setPromocoes([]);
+        setLoadingPromocoes(false);
+        return;
+      }
+      const hoje = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('promocoes')
+        .select('id, titulo, descricao, imagem_url, data_inicio, data_fim, bairro_destino')
+        .eq('bairro_destino', user.bairro)
+        .gte('data_fim', hoje)
+        .order('data_fim', { ascending: true });
+      if (error) {
+        setPromocoes([]);
+      } else {
+        setPromocoes((data as Promocao[]) || []);
+      }
+      setLoadingPromocoes(false);
+    }
+    fetchPromocoes();
+  };
+
   if (!user) return null;
 
   return (
@@ -444,8 +483,8 @@ export default function NeighborhoodScreen() {
       {/* CONTEÚDO PRINCIPAL DA TELA */}
       <div className="relative w-full h-full">
         {/* Header */}
-        <div className="relative p-4 border-b border-[#2a2a2a] bg-[#0b0b0b] z-50">
-          <div className="flex items-center justify-between">
+        <div className="relative border-b border-[#2a2a2a] bg-[#0b0b0b] z-50">
+          <div className="container mx-auto flex items-center justify-between px-4 h-14">
             {/* Esquerda: seta e info/speaker */}
             <div className="flex items-center gap-3">
               <button 
@@ -459,7 +498,7 @@ export default function NeighborhoodScreen() {
                   <button
                     onClick={() => setShowInfoPanel(true)}
                     className={`
-                      p-2 rounded-lg text-[#00d8ff] hover:bg-[#00d8ff]/10 cursor-pointer
+                      p-2 pl-2 rounded-lg text-[#00d8ff] hover:bg-[#00d8ff]/10 cursor-pointer
                       ${publications.length > 0 ? 'animate-pulse' : ''}
                     `}
                   >
@@ -529,7 +568,7 @@ export default function NeighborhoodScreen() {
         {/* Conteúdo principal */}
         <div className="container mx-auto px-4 pt-4">
           {/* Abas */}
-          <div className="flex gap-2 my-4">
+          <div className="mt-4 mb-1 flex gap-2">
             {['promotions', 'trending', 'commerce'].map(tab => (
               <button
                 key={tab}
@@ -549,20 +588,31 @@ export default function NeighborhoodScreen() {
 
           {/* Exibe resultados filtrados se houver, senão lista geral */}
           {activeTab === 'promotions' && (
-            filteredPromotions ? (
-              <PromotionBanner
-                promotions={filteredPromotions}
-                onPromotionClick={() => {}}
-                onViewNeighborhood={() => {}}
-                onAdvancedSearch={() => {}}
-              />
-            ) : (
-              <PromotionBanner
-                onPromotionClick={() => {}}
-                onViewNeighborhood={() => {}}
-                onAdvancedSearch={() => {}}
-              />
-            )
+            <div className="mt-2">
+              {loadingPromocoes ? (
+                <div className="text-center text-gray-600 py-4">Carregando promoções...</div>
+              ) : promocoes.length === 0 ? (
+                <div className="bg-[#18181b] rounded-xl shadow-lg overflow-hidden flex flex-col items-center justify-center h-100 text-gray-300 text-lg">
+                  Nenhuma promoção disponível no momento para seu bairro.
+                </div>
+              ) : (
+                <PromotionCarousel promocoes={promocoes} />
+              )}
+              {/* Botão 'Ver no mapa' permanece sempre visível */}
+              <div className="flex justify-center mt-8">
+                <button
+                  className="bg-[#00BFFF] text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 hover:opacity-90"
+                  onClick={() => setShowMap(true)}
+                >
+                  Ver no mapa
+                </button>
+              </div>
+              {showMap && (
+                <div className="mt-4">
+                  <PromotionMap onClose={() => setShowMap(false)} />
+                </div>
+              )}
+            </div>
           )}
           {activeTab === 'trending' && <RealMap />}
           {activeTab === 'commerce' && (
@@ -633,5 +683,108 @@ export default function NeighborhoodScreen() {
         />
       )}
     </>
+  );
+}
+
+// COMPONENTE DO CARROSSEL DE PROMOÇÕES
+function PromotionCarousel({ promocoes }: { promocoes: any[] }) {
+  const [current, setCurrent] = React.useState(0);
+  const [commerces, setCommerces] = React.useState<Record<string, string>>({});
+  const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    async function fetchCommerces() {
+      const ids = Array.from(new Set(promocoes.map((p: any) => p.comercio_id).filter(Boolean)));
+      if (ids.length === 0) return;
+      const { data, error } = await supabase
+        .from('comercios')
+        .select('id, nome_razao_social')
+        .in('id', ids);
+      if (!error && isMounted) {
+        const map: Record<string, string> = {};
+        (data || []).forEach((c: any) => { map[c.id] = c.nome_razao_social; });
+        setCommerces(map);
+      }
+    }
+    fetchCommerces();
+    return () => { isMounted = false; };
+  }, [promocoes]);
+
+  React.useEffect(() => {
+    if (promocoes.length <= 1) return;
+    intervalRef.current = setInterval(() => {
+      setCurrent(prev => (prev + 1) % promocoes.length);
+    }, 3000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [promocoes]);
+
+  if (!promocoes.length) return null;
+  const promo = promocoes[current];
+  const nomeComercio = promo.comercio_id ? (commerces[promo.comercio_id] || 'Estabelecimento') : 'Estabelecimento';
+  const desconto = promo.desconto ? `${promo.desconto}% OFF` : null;
+  const validade = promo.data_validade ? `Válido até ${new Date(promo.data_validade).toLocaleDateString('pt-BR')}` : '';
+  const imgUrl = promo.imagem_url && promo.imagem_url !== 'null' && promo.imagem_url !== '' ? promo.imagem_url : '/img/padrao.png';
+
+  // Função para abrir o mapa (mantém funcionalidade)
+  const handleVerNoMapa = () => {
+    // Exemplo: pode ser window.open ou navegação interna
+    window.open(`https://www.google.com/maps/search/?q=${encodeURIComponent(nomeComercio)}`);
+  };
+
+  return (
+    <div className="container mx-auto px-2 sm:px-4 md:px-6">
+      {/* Espaço extra acima do banner para harmonia visual */}
+      <div className="mt-8" />
+      {/* Banner visual */}
+      <div className="w-full rounded-2xl min-h-[320px] h-[340px] flex flex-col justify-between bg-neutral-800" style={{ aspectRatio: '3.8/1' }}>
+        {/* Conteúdo textual e botões aqui, sem <img> quebrada */}
+        <div className="relative z-20 flex flex-col justify-center h-full pl-8 pr-4 pb-8 max-w-[60%] mt-2">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 drop-shadow-lg leading-tight">{promo.titulo}</h2>
+          <p className="text-base sm:text-lg text-gray-200 mb-1 drop-shadow max-w-xl">{promo.descricao}</p>
+          <span className="text-xs text-gray-300 mb-1 block">{validade}</span>
+        </div>
+        {/* Selo de desconto (opcional, canto superior direito) */}
+        {desconto && (
+          <div className="absolute top-4 right-6 bg-[#00BFFF] text-white text-xs font-bold px-3 py-1 rounded-full shadow z-30">
+            -{desconto}
+          </div>
+        )}
+      </div>
+      {/* Indicadores do carrossel */}
+      <div className="flex justify-center items-center mt-2">
+        {promocoes.map((_: any, idx: number) => (
+          <span
+            key={idx}
+            className={`w-2 h-2 mx-1 rounded-full transition-all duration-300 ${idx === current ? 'bg-[#00BFFF]' : 'bg-white/30'}`}
+            style={{ boxShadow: idx === current ? '0 0 6px #00BFFF' : undefined }}
+          />
+        ))}
+      </div>
+      {/* Após o banner: */}
+      <div className="mt-1 flex items-center justify-between w-full px-4">
+        {/* Esquerda: Curtir e Comentar */}
+        <div className="flex items-center gap-2">
+          <button className="bg-[#212121] text-white text-sm font-medium px-4 py-2 rounded-lg shadow-md flex items-center gap-2">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.5-9-9.5C1.5 8.5 3.5 5 7 5c2.1 0 3.5 1.5 5 3.5C13.5 6.5 14.9 5 17 5c3.5 0 5.5 3.5 4 6.5-2.5 4-9 9.5-9 9.5z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span>89</span>
+          </button>
+          <button className="bg-[#212121] text-white text-sm font-medium px-4 py-2 rounded-lg shadow-md flex items-center gap-2">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span>12</span>
+          </button>
+        </div>
+        {/* Direita: Ver detalhes */}
+        <button
+          className="bg-[#212121] text-white text-sm font-medium px-4 py-2 rounded-lg shadow-md flex items-center gap-2"
+          onClick={() => window.location.href = `/promotion/${promo.id}`}
+        >
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Ver detalhes
+        </button>
+      </div>
+    </div>
   );
 }

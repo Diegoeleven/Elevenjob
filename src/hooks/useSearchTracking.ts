@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { registerSearch } from '../services/searchService';
+import { registrarBusca } from '../services/searchService';
 
 interface User {
   id: string;
@@ -10,11 +10,11 @@ interface User {
  * Hook para rastrear buscas dos usuários
  */
 export const useSearchTracking = (user: User | null) => {
-  const trackSearch = useCallback(async (searchTerm: string) => {
+  const trackSearch = useCallback(async (searchTerm: string, tipoBusca: string = 'texto', tipoFiltro: string = 'geral') => {
     if (!user || !searchTerm.trim()) return;
     
     try {
-      await registerSearch(user.id, user.bairro, searchTerm);
+      await registrarBusca(searchTerm, tipoBusca, tipoFiltro, user.id, user.bairro);
     } catch (error) {
       console.error('Erro ao rastrear busca:', error);
     }

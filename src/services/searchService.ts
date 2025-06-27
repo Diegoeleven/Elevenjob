@@ -3,9 +3,11 @@ import { supabase } from '../lib/supabase';
 export interface SearchRecord {
   id: string;
   user_id: string;
-  bairro: string;
-  termo: string;
-  data_busca: string;
+  bairro_usuario: string;
+  search_text: string;
+  tipo_busca: string;
+  tipo_filtro: string;
+  created_at: string;
 }
 
 export interface SearchTrend {
@@ -13,25 +15,66 @@ export interface SearchTrend {
   count: number;
 }
 
+export interface TrendingSearch {
+  termo: string;
+  total_buscas: number;
+  bairro: string;
+}
+
+/**
+ * Busca as tendências de busca por bairro usando a view vw_tendencias_busca
+ */
+export const getTrendingSearches = async (bairro: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("vw_tendencias_busca")
+      .select("*")
+      .eq("bairro", bairro.toLowerCase())
+      .order("total_buscas", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error("Erro ao buscar tendências:", error);
+      return [];
+    }
+
+    return data as TrendingSearch[];
+  } catch (err) {
+    console.error("Erro inesperado ao buscar tendências:", err);
+    return [];
+  }
+};
+
 /**
  * Registra uma busca no banco de dados
  */
-export const registerSearch = async (
-  userId: string,
-  bairro: string,
-  termo: string
+export const registrarBusca = async (
+  searchText: string, 
+  tipoBusca: string = 'texto', 
+  tipoFiltro: string = 'geral',
+  user_id?: string,
+  bairro_usuario?: string
 ): Promise<void> => {
   try {
+    if (!searchText || !bairro_usuario) {
+      console.log('Dados insuficientes para registrar busca:', { searchText, bairro_usuario });
+      return;
+    }
+
     const { error } = await supabase
-      .from('buscas')
+      .from('pesquisas_usuarios')
       .insert({
-        user_id: userId,
-        bairro: bairro,
-        termo: termo.toLowerCase().trim()
+        user_id: user_id || null,
+        bairro_usuario: bairro_usuario,
+        search_text: searchText.toLowerCase().trim(),
+        tipo_busca: tipoBusca,
+        tipo_filtro: tipoFiltro
       });
 
     if (error) {
       console.error('Erro ao registrar busca:', error);
+    } else {
+      console.log('Busca registrada com sucesso:', { searchText, tipoBusca, tipoFiltro, bairro_usuario });
     }
   } catch (error) {
     console.error('Erro ao registrar busca:', error);
@@ -47,11 +90,11 @@ export const getSearchTrendsByNeighborhood = async (
 ): Promise<SearchTrend[]> => {
   try {
     const { data, error } = await supabase
-      .from('buscas')
-      .select('termo')
-      .eq('bairro', bairro)
-      .gte('data_busca', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Últimos 30 dias
-      .order('data_busca', { ascending: false });
+      .from('pesquisas_usuarios')
+      .select('search_text')
+      .eq('bairro_usuario', bairro)
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Últimos 30 dias
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Erro ao buscar tendências:', error);
@@ -62,7 +105,7 @@ export const getSearchTrendsByNeighborhood = async (
     const termCounts: { [key: string]: number } = {};
     
     data?.forEach((item) => {
-      const termo = item.termo.toLowerCase().trim();
+      const termo = item.search_text.toLowerCase().trim();
       termCounts[termo] = (termCounts[termo] || 0) + 1;
     });
 
@@ -88,10 +131,10 @@ export const getRecentSearchesByNeighborhood = async (
 ): Promise<SearchRecord[]> => {
   try {
     const { data, error } = await supabase
-      .from('buscas')
+      .from('pesquisas_usuarios')
       .select('*')
-      .eq('bairro', bairro)
-      .order('data_busca', { ascending: false })
+      .eq('bairro_usuario', bairro)
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
